@@ -145,10 +145,12 @@ void Arduboy::initRandomSeed()
 uint16_t Arduboy::rawADC(byte adc_bits)
 {
   ADMUX = adc_bits;
+#ifndef MIDIBOY
   // we also need MUX5 for temperature check
   if (adc_bits == ADC_TEMP) {
     ADCSRB = _BV(MUX5);
   }
+#endif
 
   delay(2); // Wait for ADMUX setting to settle
   ADCSRA |= _BV(ADSC); // Start conversion

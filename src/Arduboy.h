@@ -27,10 +27,17 @@
 
 #define PIXEL_SAFE_MODE
 
+#ifndef MIDIBOY
 // compare Vcc to 1.1 bandgap
 #define ADC_VOLTAGE (_BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1))
 // compare temperature to 2.5 internal reference and _BV(MUX5)
 #define ADC_TEMP (_BV(REFS0) | _BV(REFS1) | _BV(MUX2) | _BV(MUX1) | _BV(MUX0))
+#else
+// compare Vcc to 1.1 bandgap
+#define ADC_VOLTAGE (_BV(REFS1) | _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1))
+// compare temperature to 1.1 internal reference
+#define ADC_TEMP (_BV(REFS0) | _BV(REFS1) | _BV(MUX3))
+#endif
 
 class Arduboy : public Print, public ArduboyCore
 {

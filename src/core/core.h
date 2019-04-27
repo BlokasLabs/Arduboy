@@ -133,6 +133,10 @@
 #define WHITE 1 //< lit pixel
 #define BLACK 0 //< unlit pixel
 
+#ifdef MIDIBOY
+#include "MidiboyDefs.h"
+#endif
+
 class ArduboyCore
 {
 public:

@@ -21,7 +21,7 @@ const uint8_t PROGMEM pinBootProgram[] = {
   RST, OUTPUT,
   0
 };
-
+#ifndef MIDIBOY
 const uint8_t PROGMEM lcdBootProgram[] = {
   // boot defaults are commented out but left here incase they
   // might prove useful for reference
@@ -85,6 +85,12 @@ const uint8_t PROGMEM lcdBootProgram[] = {
   // set page address range
   // 0x22, 0x00, PAGE_ADDRESS_END
 };
+#else
+// SH1106
+static const uint8_t PROGMEM lcdBootProgram[] = {
+  0xae, 0x40, 0xa1, 0xc8, 0x81, 0xff, 0x02, 0x10, 0xb0, 0xaf
+};
+#endif
 
 
 ArduboyCore::ArduboyCore() {}
@@ -198,7 +204,9 @@ void ArduboyCore::saveMuchPower()
   // timer 0 is for millis()
   // timers 1 and 3 are for music and sounds
   power_timer2_disable();
+#ifndef MIDIBOY
   power_usart1_disable();
+#endif
   // we need USB, for now (to allow triggered reboots to reprogram)
   // power_usb_disable()
 }
@@ -212,21 +220,54 @@ uint8_t ArduboyCore::height() { return HEIGHT; }
 
 void ArduboyCore::paint8Pixels(uint8_t pixels)
 {
+#ifdef MIDIBOY
+  static uint8_t x, y;
+
+  if (x == 0)
+  {
+    LCDCommandMode();
+    SPI.transfer(0x02);
+    SPI.transfer(0x10);
+    SPI.transfer(0xb0 | y);
+    LCDDataMode();
+    y = (y + 1) & (HEIGHT / 8 - 1);
+  }
+  x = (x + 1) & (WIDTH - 1);
+#endif
+
   SPI.transfer(pixels);
 }
 
 void ArduboyCore::paintScreen(const unsigned char *image)
 {
+#ifndef MIDIBOY
   for (int i = 0; i < (HEIGHT*WIDTH)/8; i++)
   {
     SPI.transfer(pgm_read_byte(image + i));
   }
+#else
+  // Reset position.
+  for (int j=0; j<8; ++j)
+  {
+    // Set the page and column addresses.
+    LCDCommandMode();
+    SPI.transfer(0x02);
+    SPI.transfer(0x10);
+    SPI.transfer(0xb0 | j);
+    LCDDataMode();
+    for (int i=0; i<WIDTH; ++i)
+    {
+      SPI.transfer(pgm_read_byte(image + (j * WIDTH) + i));
+    }
+  }
+#endif
 }
 
 // paint from a memory buffer, this should be FAST as it's likely what
 // will be used by any buffer based subclass
 void ArduboyCore::paintScreen(unsigned char image[])
 {
+#ifndef MIDIBOY
   uint8_t c;
   int i = 0;
 
@@ -247,12 +288,45 @@ void ArduboyCore::paintScreen(unsigned char image[])
     SPDR = c;
   }
   while (!(SPSR & _BV(SPIF))) { } // wait for the last byte to be sent
+#else
+  // Reset position.
+  for (int j=0; j<8; ++j)
+  {
+    // Set the page and column addresses.
+    LCDCommandMode();
+    SPI.transfer(0x02);
+    SPI.transfer(0x10);
+    SPI.transfer(0xb0 | j);
+    LCDDataMode();
+    for (int i=0; i<WIDTH; ++i)
+    {
+      SPI.transfer(*(image + (j * WIDTH) + i));
+    }
+  }
+#endif
 }
 
 void ArduboyCore::blank()
 {
+#ifndef MIDIBOY
   for (int i = 0; i < (HEIGHT*WIDTH)/8; i++)
     SPI.transfer(0x00);
+#else
+  // Reset position.
+  for (int j=0; j<8; ++j)
+  {
+    // Set the page and column addresses.
+    LCDCommandMode();
+    SPI.transfer(0x02);
+    SPI.transfer(0x10);
+    SPI.transfer(0xb0 | j);
+    LCDDataMode();
+    for (int i=0; i<WIDTH; ++i)
+    {
+      SPI.transfer(0x00);
+    }
+  }
+#endif
 }
 
 void ArduboyCore::sendLCDCommand(uint8_t command)
@@ -333,6 +407,8 @@ uint8_t ArduboyCore::buttonsState()
   buttons = buttons | (((~PINE) & B01000000) >> 3);
   // B (right)
   buttons = buttons | (((~PINB) & B00010000) >> 2);
+#elif defined(MIDIBOY)
+  buttons = (~PINC) & 0x3f;
 #endif
   
   return buttons;
