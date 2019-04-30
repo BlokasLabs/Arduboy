@@ -85,14 +85,14 @@
 #define A_BUTTON     _BV(digitalPinToBit(PIN_BTN_A))
 #define B_BUTTON     _BV(digitalPinToBit(PIN_BTN_B))
 
-#define PIN_SPEAKER_1 PIN_SPK_A
-#define PIN_SPEAKER_2 PIN_SPK_B
+#define PIN_SPEAKER_1 PIN_SPK_B
+#define PIN_SPEAKER_2 PIN_SPK_A
 
-#define PIN_SPEAKER_1_PORT portOutputRegister(PIN_SPK_A)
-#define PIN_SPEAKER_2_PORT portOutputRegister(PIN_SPK_B)
+#define PIN_SPEAKER_1_PORT portOutputRegister(PIN_SPEAKER_1)
+#define PIN_SPEAKER_2_PORT portOutputRegister(PIN_SPEAKER_2)
 
-#define PIN_SPEAKER_1_BITMASK _BV(digitalPinToBit(PIN_SPK_A))
-#define PIN_SPEAKER_2_BITMASK _BV(digitalPinToBit(PIN_SPK_B))
+#define PIN_SPEAKER_1_BITMASK _BV(digitalPinToBit(PIN_SPEAKER_1))
+#define PIN_SPEAKER_2_BITMASK _BV(digitalPinToBit(PIN_SPEAKER_2))
 
 #define OLED_PIXELS_INVERTED 0xA7
 #define OLED_PIXELS_NORMAL 0xA6

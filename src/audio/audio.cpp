@@ -1,3 +1,5 @@
+#define MIDIBOY
+
 #include "Arduboy.h"
 #include "audio.h"
 
@@ -44,7 +46,11 @@ bool ArduboyAudio::audio_enabled = false;
 void ArduboyAudio::on()
 {
   power_timer1_enable();
+#ifndef MIDIBOY
   power_timer3_enable();
+#else
+  power_timer2_enable();
+#endif
   audio_enabled = true;
 }
 
@@ -57,7 +63,11 @@ void ArduboyAudio::off()
 {
   audio_enabled = false;
   power_timer1_disable();
+#ifndef MIDIBOY
   power_timer3_disable();
+#else
+  power_timer2_disable();
+#endif
 }
 
 void ArduboyAudio::saveOnOff()
@@ -88,18 +98,32 @@ void ArduboyTunes::initChannel(byte pin)
   pinMode(pin, OUTPUT);
   switch (timer_num) {
     case 1: // 16 bit timer
+#ifndef MIDIBOY
       TCCR1A = 0;
       TCCR1B = 0;
       bitWrite(TCCR1B, WGM12, 1);
       bitWrite(TCCR1B, CS10, 1);
+#else
+      TCCR2A = 0; // Use 8 bit timer for timer 1
+      TCCR2B = 0;
+      bitWrite(TCCR2A, WGM21, 1);
+      bitWrite(TCCR2B, CS20, 1);
+#endif
       _tunes_timer1_pin_port = portOutputRegister(digitalPinToPort(pin));
       _tunes_timer1_pin_mask = digitalPinToBitMask(pin);
       break;
     case 3: // 16 bit timer
+#ifndef MIDIBOY
       TCCR3A = 0;
       TCCR3B = 0;
       bitWrite(TCCR3B, WGM32, 1);
       bitWrite(TCCR3B, CS30, 1);
+#else
+      TCCR1A = 0; // Use 16 bit timer for timer 3 which is used also for timing.
+      TCCR1B = 0;
+      bitWrite(TCCR1B, WGM12, 1);
+      bitWrite(TCCR1B, CS10, 1);
+#endif
       _tunes_timer3_pin_port = portOutputRegister(digitalPinToPort(pin));
       _tunes_timer3_pin_mask = digitalPinToBitMask(pin);
       playNote(0, 60);  /* start and stop channel 0 (timer 3) on middle C so wait/delay works */
@@ -133,25 +157,61 @@ void ArduboyTunes::playNote(byte chan, byte note)
 
   //******  16-bit timer  *********
   // two choices for the 16 bit timers: ck/1 or ck/64
+
+  // two choices for the 16 bit timers: ck/1 or ck/64
+#ifndef MIDIBOY
   ocr = F_CPU / frequency2 - 1;
   prescalar_bits = 0b001;
   if (ocr > 0xffff) {
     ocr = F_CPU / frequency2 / 64 - 1;
     prescalar_bits = 0b011;
   }
+#else
+  ocr = F_CPU / frequency2 - 1;
+  prescalar_bits = 0b001;
+  switch (timer_num)
+  {
+    case 1:
+      if (ocr > 0xff) {
+        ocr = F_CPU / frequency2 / 256 - 1;
+        prescalar_bits = 0b110;
+      }
+      break;
+    case 3:
+      if (ocr > 0xffff) {
+        ocr = F_CPU / frequency2 / 64 - 1;
+        prescalar_bits = 0b011;
+      }
+      break;
+  }
+#endif
   // Set the OCR for the given timer, then turn on the interrupts
   switch (timer_num) {
     case 1:
+#ifndef MIDIBOY
       TCCR1B = (TCCR1B & 0b11111000) | prescalar_bits;
       OCR1A = ocr;
       bitWrite(TIMSK1, OCIE1A, 1);
+#else
+      TCCR2B = (TCCR2B & 0b11111000) | prescalar_bits;
+      OCR2A = ocr;
+      bitWrite(TIMSK2, OCIE2A, 1);
+#endif
       break;
     case 3:
+#ifndef MIDIBOY
       TCCR3B = (TCCR3B & 0b11111000) | prescalar_bits;
       OCR3A = ocr;
       wait_timer_frequency2 = frequency2;  // for "tune_delay" function
       wait_timer_playing = true;
       bitWrite(TIMSK3, OCIE3A, 1);
+#else
+      TCCR1B = (TCCR1B & 0b11111000) | prescalar_bits;
+      OCR1A = ocr;
+      wait_timer_frequency2 = frequency2;  // for "tune_delay" function
+      wait_timer_playing = true;
+      bitWrite(TIMSK1, OCIE1A, 1);
+#endif
       break;
   }
 }
@@ -162,7 +222,11 @@ void ArduboyTunes::stopNote(byte chan)
   timer_num = pgm_read_byte(tune_pin_to_timer_PGM + chan);
   switch (timer_num) {
     case 1:
+#ifndef MIDIBOY
       TIMSK1 &= ~(1 << OCIE1A);                 // disable the interrupt
+#else
+      TIMSK2 &= ~(1 << OCIE2A);
+#endif
       *_tunes_timer1_pin_port &= ~(_tunes_timer1_pin_mask);   // keep pin low after stop
       break;
     case 3:
@@ -235,10 +299,18 @@ void ArduboyTunes::closeChannels(void)
     timer_num = pgm_read_byte(tune_pin_to_timer_PGM + chan);
     switch (timer_num) {
       case 1:
+#ifndef MIDIBOY
         TIMSK1 &= ~(1 << OCIE1A);
+#else
+        TIMSK2 &= ~(1 << OCIE2A);
+#endif
         break;
       case 3:
+#ifndef MIDIBOY
         TIMSK3 &= ~(1 << OCIE3A);
+#else
+        TIMSK1 &= ~(1 << OCIE1A);
+#endif
         break;
     }
     digitalWrite(_tune_pins[chan], 0);
@@ -266,6 +338,7 @@ void ArduboyTunes::tone(unsigned int frequency, unsigned long duration)
   uint32_t ocr = 0;
 
   // two choices for the 16 bit timers: ck/1 or ck/64
+#ifndef MIDIBOY
   ocr = F_CPU / frequency / 2 - 1;
   prescalarbits = 0b001;
   if (ocr > 0xffff) {
@@ -273,6 +346,15 @@ void ArduboyTunes::tone(unsigned int frequency, unsigned long duration)
     prescalarbits = 0b011;
   }
   TCCR1B = (TCCR1B & 0b11111000) | prescalarbits;
+#else
+  ocr = F_CPU / frequency / 2 - 1;
+  prescalarbits = 0b001;
+  if (ocr > 0xff) {
+    ocr = F_CPU / frequency / 2 / 256 - 1;
+    prescalarbits = 0b100;
+  }
+  TCCR2B = (TCCR2B & 0b11111000) | prescalarbits;
+#endif
 
   // Calculate the toggle count
   if (duration > 0) {
@@ -284,13 +366,23 @@ void ArduboyTunes::tone(unsigned int frequency, unsigned long duration)
   // Set the OCR for the given timer,
   // set the toggle count,
   // then turn on the interrupts
+#ifndef MIDIBOY
   OCR1A = ocr;
   timer1_toggle_count = toggle_count;
   bitWrite(TIMSK1, OCIE1A, 1);
+#else
+  OCR2A = ocr;
+  timer1_toggle_count = toggle_count;
+  bitWrite(TIMSK2, OCIE2A, 1);
+#endif
 }
 
 // TIMER 1
+#ifndef MIDIBOY
 ISR(TIMER1_COMPA_vect)
+#else
+ISR(TIMER2_COMPA_vect)
+#endif
 {
   if (tonePlaying) {
     if (timer1_toggle_count != 0) {
@@ -300,7 +392,11 @@ ISR(TIMER1_COMPA_vect)
     }
     else {
       tonePlaying = false;
+#ifndef MIDIBOY
       TIMSK1 &= ~(1 << OCIE1A);                 // disable the interrupt
+#else
+      TIMSK2 &= ~(1 << OCIE2A);                 // disable the interrupt
+#endif
       *_tunes_timer1_pin_port &= ~(_tunes_timer1_pin_mask);   // keep pin low after stop
     }
   }
@@ -310,7 +406,11 @@ ISR(TIMER1_COMPA_vect)
 }
 
 // TIMER 3
+#ifndef MIDIBOY
 ISR(TIMER3_COMPA_vect)
+#else
+ISR(TIMER1_COMPA_vect)
+#endif
 {
   // Timer 3 is the one assigned first, so we keep it running always
   // and use it to time score waits, whether or not it is playing a note.

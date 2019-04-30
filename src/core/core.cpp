@@ -203,8 +203,8 @@ void ArduboyCore::saveMuchPower()
   power_twi_disable();
   // timer 0 is for millis()
   // timers 1 and 3 are for music and sounds
-  power_timer2_disable();
 #ifndef MIDIBOY
+  power_timer2_disable();
   power_usart1_disable();
 #endif
   // we need USB, for now (to allow triggered reboots to reprogram)
