@@ -1,5 +1,3 @@
-#define MIDIBOY
-
 #include "Arduboy.h"
 #include "audio.h"
 

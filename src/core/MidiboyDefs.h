@@ -2,7 +2,7 @@
 #define MIDIBOY_DEFS_H
 
 #ifndef ArduboyCore_h
-#error Don't include MidiboyDefs.h directly! Include Arduboy2Core.h instead!
+#error "Don't include MidiboyDefs.h directly! Include Arduboy2Core.h instead!"
 #endif
 
 #ifdef MIDIBOY

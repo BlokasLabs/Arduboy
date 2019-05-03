@@ -158,7 +158,7 @@ void ArduboyCore::bootLCD()
   LCDCommandMode();
   // run our customized boot-up command sequence against the
   // OLED to initialize it properly for Arduboy
-  for (int8_t i=0; i < sizeof(lcdBootProgram); i++) {
+  for (uint8_t i=0; i < sizeof(lcdBootProgram); i++) {
     SPI.transfer(pgm_read_byte(lcdBootProgram + i));
   }
   LCDDataMode();
@@ -377,6 +377,10 @@ void ArduboyCore::setRGBled(uint8_t red, uint8_t green, uint8_t blue)
 #elif defined(AB_DEVKIT)
   // only blue on devkit
   digitalWrite(BLUE_LED, ~blue);
+#elif defined(MIDIBOY)
+  (void)red;
+  (void)green;
+  (void)blue;
 #endif
 }
 
