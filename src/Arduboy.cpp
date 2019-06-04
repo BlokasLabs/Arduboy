@@ -65,7 +65,11 @@ void Arduboy::bootUtils()
 void Arduboy::bootLogo()
 {
   // setRGBled(10,0,0);
+#ifndef MIDIBOY
   for(int8_t y = -18; y<=24; y++) {
+#else
+  for (int16_t y = -16; y <= 16; y++) {
+#endif
     setRGBled(24-y, 0, 0);
 
     clear();
@@ -78,6 +82,11 @@ void Arduboy::bootLogo()
       delay(250);
     }
   }
+
+#ifdef MIDIBOY
+  drawBitmap(20, 36, midiboy_edition_text, 88, 8, WHITE);
+  display();
+#endif
 
   delay(750);
   setRGBled(0,0,0);
